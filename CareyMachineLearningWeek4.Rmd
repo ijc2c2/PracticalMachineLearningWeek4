@@ -1,0 +1,79 @@
+---
+title: "Coursera Practical Machine Learning Final Project"
+author: "Isaac Carey"
+date: "5/9/2021"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Purpose
+Using devices such as Jawbone Up, Nike FuelBand, and Fitbit it is now possible to collect a large amount of data about personal activity relatively inexpensively. These type of devices are part of the quantified self movement – a group of enthusiasts who take measurements about themselves regularly to improve their health, to find patterns in their behavior, or because they are tech geeks. One thing that people regularly do is quantify how much of a particular activity they do, but they rarely quantify how well they do it. In this project, your goal will be to use data from accelerometers on the belt, forearm, arm, and dumbell of 6 participants. They were asked to perform barbell lifts correctly and incorrectly in 5 different ways. More information is available from the website here: http://web.archive.org/web/20161224072740/http:/groupware.les.inf.puc-rio.br/har (see the section on the Weight Lifting Exercise Dataset).
+
+Using this data, I have explored a couple of options and found a model that very accurartely models the data. I will be including the Test Results of my model as well, which will be submitted separately on coursera.org.
+
+## Loading and Preprocessing the Data
+
+After loading the data from the given websites, I needed to remove all columns with NA in them, along with many of the irrelevant data such as name and timestamp. This also included removing all data columns with near-zero variance, as they would not be helpful in the modeling. This left me with drastically fewer columns, but I believe they are the useful ones.
+
+```{r preprocessing}
+library(rattle)
+library(rpart)
+library(rpart.plot)
+library(RColorBrewer)
+library(caret)
+library(randomForest)
+
+projTrain <- read.csv("https://d396qusza40orc.cloudfront.net/predmachlearn/pml-training.csv")
+projTest <- read.csv("https://d396qusza40orc.cloudfront.net/predmachlearn/pml-testing.csv")
+projTrain2 <- projTrain[, colSums(is.na(projTrain)) == 0]
+projTest2 <- projTest[, colSums(is.na(projTest)) == 0]
+projTrain3 <- projTrain2[, -c(1:7)]
+projTest3 <- projTest2[, -c(1:7)]
+nzv <- nearZeroVar(projTrain3)
+projTrainFinal <- projTrain3[-c(nzv)]
+projTestFinal <- projTest3
+```
+
+## Partitioning the Data and Training the Model
+
+I used 70% of the data as a training resource, and the other 30% as testing data. My first attempt was with "rpart", which is one of R's package for regression and classification trees. I also used cross-validation with resampling, setting number = 4. Here are the results:
+
+```{r first analysis}
+inTrain <- createDataPartition(projTrainFinal$classe, p = 0.7, list = FALSE)
+myTraining <- projTrainFinal[inTrain,]
+myTest <- projTrainFinal[-inTrain,]
+control <- trainControl(method = "cv",  number = 4, verbose = FALSE)
+modFit<- train(classe~., method = "rpart", trControl = control, data = myTraining)
+
+fancyRpartPlot(modFit$finalModel)
+predictRpart <- predict(modFit, myTest)
+confMatrRpart <- confusionMatrix(predictRpart,factor(myTest$classe))
+confMatrRpart
+```
+
+As you can see from the Confict Matrix report, the results were not spectactular. My next attempt was to use the random forest, which is method "rf" in R. The same cross-verification process was used here as well. I decided to use this next because our course material mentioned that it could be more expensive time-wise, but was usually more accurate.
+
+```{r second analysis}
+modFit2 <- train(classe ~ ., data = myTraining, trControl = control, method = "rf")
+modFit2
+
+predictRF <- predict(modFit2, myTest)
+confMatrRF <- confusionMatrix(predictRF, factor(myTest$classe))
+confMatrRF
+```
+
+These results are much better. This gives me a high confidence that my remaining 20 test values will be classified correctly.
+
+## Quiz Results
+
+Here are the results for the separate test data from the website.
+
+```{r quiz}
+QuizAnswers <- predict(modFit2, newdata = projTestFinal)
+QuizAnswers
+```
+
+Thanks for reading this.
