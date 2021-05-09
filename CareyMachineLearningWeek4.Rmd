@@ -65,7 +65,7 @@ confMatrRF <- confusionMatrix(predictRF, factor(myTest$classe))
 confMatrRF
 ```
 
-These results are much better. This gives me a high confidence that my remaining 20 test values will be classified correctly.
+These results are much better. This gives a total of 40 misclassified exercises, or an out-of-sample error of 0.0068. This gives me a high confidence that the remaining 20 test values will be classified correctly.
 
 ## Quiz Results
 
